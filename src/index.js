@@ -2,46 +2,55 @@ const express = require("express")
 const _ = require('lodash')
 const app = express()
 const {v4: uuidv4} = require('uuid')
-const crypto = require('crypto')
 
-app.use(express.json())
+const signupRoute = require('./server/routes/signup')
+const signinRoute = require('./server/routes/signin')
 
-let users = [{
-    idx: uuidv4(),  
-    id: 'qwe',
-    pwd: encryptPassword("123"),
-    name: 'jmg',
-    gender: 'male',
-    age: 19,
-    phone: '010-6646-6546'
-}]
+const dbConnect = require('./db/connect')
+const User = require('./db/users.schema')
+const encryptPassword = require('./lib/encryptPassword')
+const initExpressApp = require("./server/initExpressApp")
 
-function encryptPassword(password) {
-    return crypto
-        .createHash('sha256')
-        .update(password + "ssibal")
-        .digest('base64')
+async function a() {
+    console.log('db connecting ...')
+    await dbConnect()
+    console.log('db connected')
+
+    await User.create({
+        id: "zxc",
+        pwd: "zxc",
+        name: "zxc",
+        age:123
+    })
+
+    console.log(await User.find())
 }
+a()
+
+initExpressApp(app)
+
+const routes = [
+    signinRoute,
+    signupRoute
+]
+
+routes.forEach(route=> {
+    app[route.method][route.path, route.handler]
+})
 
 app.post('/', (req, res) => {
     return res.send("qwe")
 })
 
-app.post('/signup', (req, res) => {
-    const user = _.pick(
-        req.body,
-        [
-            'id',
-            'pwd',
-            'name',
-            'gender',
-            'age',
-            'phone'
-        ]
-    )
 
-    users.push(Object.assign(user, {idx:uuidv4()}))
-    return res.json({success: true})
+app.get('/users/me', (req, res) => {
+    const {idx} = req.session
+
+    const me = users.find(user => {
+        return user.idx === idx
+    })
+
+    return res.json(me)
 })
 
 app.get('/users', (req, res) => {
